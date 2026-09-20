@@ -5,57 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>AR Tubo Venturi</title>
 
-  <!-- A-Frame y AR.js (NFT: reconocimiento de imagen) -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://rawcdn.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar-nft.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
 
   <style>
     body { margin: 0; overflow: hidden; }
-
-    #ui {
-      position: fixed;
-      bottom: 20px;
-      left: 0;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      z-index: 999;
-    }
-
-    #ui button {
-      padding: 14px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      background: #0d9488;
-      color: white;
-      font-family: Arial, sans-serif;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-
+    #ui { position: fixed; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: center; gap: 12px; z-index: 999; }
+    #ui button { padding: 14px 20px; font-size: 16px; border: none; border-radius: 10px; background: #0d9488; color: white; font-family: Arial, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
     #ui button:active { background: #0f766e; }
-
-    #instrucciones {
-      position: fixed;
-      top: 10px;
-      left: 0;
-      width: 100%;
-      text-align: center;
-      color: white;
-      font-family: Arial, sans-serif;
-      font-size: 14px;
-      text-shadow: 0 1px 3px black;
-      z-index: 999;
-      padding: 0 10px;
-    }
+    #instrucciones { position: fixed; top: 10px; left: 0; width: 100%; text-align: center; color: white; font-family: Arial, sans-serif; font-size: 14px; text-shadow: 0 1px 3px black; z-index: 999; padding: 0 10px; }
   </style>
 </head>
 <body>
 
   <div id="instrucciones">Apunta la cámara hacia la imagen del Tubo Venturi</div>
-  <div id="debug" style="position:fixed;top:30px;left:0;width:100%;text-align:center;color:yellow;font-family:monospace;font-size:12px;z-index:999;background:rgba(0,0,0,0.6);padding:4px;"></div>
 
   <div id="ui">
     <button onclick="activarAnimacion()">▶ Activar flujo</button>
@@ -68,25 +31,24 @@
     renderer="antialias: true; alpha: true"
     embedded>
 
-    <a-nft
-      type="nft"
-      url="tubo-marker"
-      smooth="true"
-      smoothCount="10"
-      smoothTolerance="0.01"
-      smoothThreshold="5">
+    <a-nft type="nft" url="tubo-marker" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
 
-      <!-- El modelo ya trae: cuerpo del tubo, flechas de velocidad,
-           indicadores de presión, etiquetas de sección y la animación
-           de flujo llamada "FlowAnimation.001" -->
       <a-entity
         id="modeloVenturi"
         gltf-model="tubo_venturi.glb"
         scale="0.3 0.3 0.3"
         position="0 0 0"
-        rotation="-90 0 0"
-        animation-mixer="clip: FlowAnimation.001; loop: repeat; clampWhenFinished: false; enabled: false">
+        rotation="-90 0 0">
       </a-entity>
+
+      <a-sphere
+        id="particulaFlujo"
+        radius="0.06"
+        color="#ff2200"
+        material="emissive: #ff2200; emissiveIntensity: 0.6"
+        position="-0.35 0.02 0"
+        animation__flujo="property: position; from: -0.35 0.02 0; to: 0.35 0.02 0; dur: 1800; loop: true; dir: alternate; easing: easeInOutSine; startEvents: iniciarFlujo; pauseEvents: pausarFlujo">
+      </a-sphere>
 
     </a-nft>
 
@@ -95,72 +57,23 @@
   </a-scene>
 
   <script>
-    const debugDiv = document.getElementById('debug');
-    function log(msg) {
-      debugDiv.innerText = msg;
-      console.log(msg);
-    }
-
-    const modeloEl = document.querySelector('#modeloVenturi');
-
-    modeloEl.addEventListener('model-loaded', function (e) {
-      const gltf = e.detail.model;
-      const clips = (gltf.animations || []).map(a => a.name);
-      log('Modelo cargado. Animaciones: [' + clips.join(', ') + ']');
-
-      // Forzamos que la partícula de flujo sea grande y de color brillante,
-      // para que sea claramente visible aunque el material original sea gris
-      gltf.traverse(function (node) {
-        if (node.name === 'Flujo_Particula') {
-          node.scale.set(4, 4, 4);
-          if (node.material) {
-            node.material = node.material.clone();
-            node.material.color.set(0xff2200);
-            node.material.emissive && node.material.emissive.set(0xff2200);
-          }
-        }
-      });
-    });
-
-    modeloEl.addEventListener('model-error', function (e) {
-      log('ERROR al cargar el modelo: ' + JSON.stringify(e.detail));
-    });
-
-    // Activa / detiene la animación del flujo al presionar el botón
     let animando = false;
 
     function activarAnimacion() {
-      const modelo = document.querySelector('#modeloVenturi');
-
-      if (!AFRAME.components['animation-mixer']) {
-        log('ERROR: el componente animation-mixer NO está registrado (aframe-extras no cargó)');
-        return;
-      }
-
-      const mixer = modelo.components['animation-mixer'];
-
+      const particula = document.querySelector('#particulaFlujo');
       animando = !animando;
-
       if (animando) {
-        modelo.setAttribute('animation-mixer', 'enabled', true);
-        log('Boton presionado. enabled=true. mixer existe: ' + !!mixer);
-        if (mixer && mixer.mixer) {
-          log('mixer._actions: ' + (mixer.mixer._actions ? mixer.mixer._actions.length : 'N/A'));
-        }
-        if (mixer) mixer.play();
+        particula.emit('iniciarFlujo');
       } else {
-        modelo.setAttribute('animation-mixer', 'enabled', false);
-        log('Animación detenida.');
+        particula.emit('pausarFlujo');
       }
     }
 
-    // Explicación por voz usando la Web Speech API (gratis, integrada en el navegador)
     function explicarFuncionamiento() {
       const texto = "El Tubo Venturi funciona bajo el principio de continuidad y el principio de Bernoulli. " +
         "Al reducirse el diámetro en la garganta, la velocidad del fluido aumenta y, como consecuencia, " +
         "la presión disminuye. Esta diferencia de presión entre la entrada y la garganta permite medir " +
         "el caudal que circula por la tubería.";
-
       const utterance = new SpeechSynthesisUtterance(texto);
       utterance.lang = 'es-ES';
       utterance.rate = 0.95;
