@@ -106,7 +106,20 @@
     modeloEl.addEventListener('model-loaded', function (e) {
       const gltf = e.detail.model;
       const clips = (gltf.animations || []).map(a => a.name);
-      log('Modelo cargado. Animaciones encontradas: [' + clips.join(', ') + ']');
+      log('Modelo cargado. Animaciones: [' + clips.join(', ') + ']');
+
+      // Forzamos que la partícula de flujo sea grande y de color brillante,
+      // para que sea claramente visible aunque el material original sea gris
+      gltf.traverse(function (node) {
+        if (node.name === 'Flujo_Particula') {
+          node.scale.set(4, 4, 4);
+          if (node.material) {
+            node.material = node.material.clone();
+            node.material.color.set(0xff2200);
+            node.material.emissive && node.material.emissive.set(0xff2200);
+          }
+        }
+      });
     });
 
     modeloEl.addEventListener('model-error', function (e) {
