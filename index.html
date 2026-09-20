@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>AR Tubo Venturi</title>
+
+  <!-- A-Frame y AR.js (NFT: reconocimiento de imagen) -->
+  <script src="https://cdn.jsdelivr.net/npm/[email protected]/dist/aframe-master.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar-nft.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    #ui {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      z-index: 999;
+    }
+
+    #ui button {
+      padding: 14px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #0d9488;
+      color: white;
+      font-family: Arial, sans-serif;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    #ui button:active { background: #0f766e; }
+
+    #instrucciones {
+      position: fixed;
+      top: 10px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      text-shadow: 0 1px 3px black;
+      z-index: 999;
+      padding: 0 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="instrucciones">Apunta la cámara hacia la imagen del Tubo Venturi</div>
+
+  <div id="ui">
+    <button onclick="activarAnimacion()">▶ Activar flujo</button>
+    <button onclick="explicarFuncionamiento()">🔊 Explicación</button>
+  </div>
+
+  <a-scene
+    vr-mode-ui="enabled: false"
+    arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;"
+    renderer="antialias: true; alpha: true"
+    embedded>
+
+    <a-nft
+      type="nft"
+      url="tubo-marker"
+      smooth="true"
+      smoothCount="10"
+      smoothTolerance="0.01"
+      smoothThreshold="5">
+
+      <!-- El modelo ya trae: cuerpo del tubo, flechas de velocidad,
+           indicadores de presión, etiquetas de sección y la animación
+           de flujo llamada "FlowAnimation.001" -->
+      <a-entity
+        id="modeloVenturi"
+        gltf-model="tubo_venturi.glb"
+        scale="0.3 0.3 0.3"
+        position="0 0 0"
+        rotation="-90 0 0"
+        animation-mixer="clip: FlowAnimation.001; loop: repeat; clampWhenFinished: false; enabled: false">
+      </a-entity>
+
+    </a-nft>
+
+    <a-entity camera></a-entity>
+
+  </a-scene>
+
+  <script>
+    // Activa / detiene la animación del flujo al presionar el botón
+    let animando = false;
+
+    function activarAnimacion() {
+      const modelo = document.querySelector('#modeloVenturi');
+      const mixer = modelo.components['animation-mixer'];
+
+      animando = !animando;
+
+      if (animando) {
+        modelo.setAttribute('animation-mixer', 'enabled', true);
+        if (mixer) mixer.play();
+      } else {
+        modelo.setAttribute('animation-mixer', 'enabled', false);
+      }
+    }
+
+    // Explicación por voz usando la Web Speech API (gratis, integrada en el navegador)
+    function explicarFuncionamiento() {
+      const texto = "El Tubo Venturi funciona bajo el principio de continuidad y el principio de Bernoulli. " +
+        "Al reducirse el diámetro en la garganta, la velocidad del fluido aumenta y, como consecuencia, " +
+        "la presión disminuye. Esta diferencia de presión entre la entrada y la garganta permite medir " +
+        "el caudal que circula por la tubería.";
+
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.95;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+  </script>
+
+</body>
+</html>
